@@ -1,0 +1,190 @@
+name: JMeter Performance Tests
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Download JMeter
+        run: |
+          wget -q https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+          echo "$(pwd)/apache-jmeter-5.6.3/bin" >> $GITHUB_PATH
+
+      - name: Run Baseline Test (50 users)
+        run: |
+          mkdir -p reports/baseline
+          jmeter -n \
+            -t demoblaze_perf_test.jmx \
+            -l reports/baseline/results.jtl \
+            -e -o reports/baseline/html \
+            -Jthreads=50 -Jrampup=10 -Jloops=1
+        continue-on-error: true
+
+      - name: Run Load Test 150 users
+        run: |
+          mkdir -p reports/load_150
+          jmeter -n \
+            -t demoblaze_perf_test.jmx \
+            -l reports/load_150/results.jtl \
+            -e -o reports/load_150/html \
+            -Jthreads=150 -Jrampup=30 -Jloops=1
+        continue-on-error: true
+
+      - name: Run Load Test 300 users
+        run: |
+          mkdir -p reports/load_300
+          jmeter -n \
+            -t demoblaze_perf_test.jmx \
+            -l reports/load_300/results.jtl \
+            -e -o reports/load_300/html \
+            -Jthreads=300 -Jrampup=60 -Jloops=1
+        continue-on-error: true
+
+      - name: Run Stress Test 500 users
+        run: |
+          mkdir -p reports/stress_500
+          jmeter -n \
+            -t demoblaze_perf_test.jmx \
+            -l reports/stress_500/results.jtl \
+            -e -o reports/stress_500/html \
+            -Jthreads=500 -Jrampup=60 -Jloops=1
+        continue-on-error: true
+
+      - name: Parse Results
+        id: results
+        run: |
+          parse_jtl() {
+            local file=$1
+            local total=$(tail -n +2 "$file" | wc -l)
+            local errors=$(tail -n +2 "$file" | awk -F',' '$8=="false"' | wc -l)
+            local error_pct=$(echo "scale=2; $errors * 100 / $total" | bc)
+            local avg_rt=$(tail -n +2 "$file" | awk -F',' '{sum+=$2} END {printf "%.0f", sum/NR}')
+            echo "${total}|${errors}|${error_pct}|${avg_rt}"
+          }
+          echo "baseline=$(parse_jtl reports/baseline/results.jtl)" >> $GITHUB_OUTPUT
+          echo "load150=$(parse_jtl reports/load_150/results.jtl)" >> $GITHUB_OUTPUT
+          echo "load300=$(parse_jtl reports/load_300/results.jtl)" >> $GITHUB_OUTPUT
+          echo "stress=$(parse_jtl reports/stress_500/results.jtl)" >> $GITHUB_OUTPUT
+
+      - name: Create Reports Index Page
+        run: |
+          cat > reports/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head><title>JMeter Performance Reports</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; background: #f5f5f5; }
+            h1 { color: #333; }
+            .card { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            a { color: #0066cc; text-decoration: none; font-size: 18px; }
+            a:hover { text-decoration: underline; }
+          </style>
+          </head>
+          <body>
+            <h1>DemoBlaze JMeter Performance Reports</h1>
+            <div class="card"><a href="baseline/html/index.html">Baseline Test — 50 Users</a></div>
+            <div class="card"><a href="load_150/html/index.html">Load Test — 150 Users</a></div>
+            <div class="card"><a href="load_300/html/index.html">Load Test — 300 Users</a></div>
+            <div class="card"><a href="stress_500/html/index.html">Stress Test — 500 Users</a></div>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./reports
+          keep_files: false
+
+      - name: Send Slack Notification
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          RUN_NUM: ${{ github.run_number }}
+          B: ${{ steps.results.outputs.baseline }}
+          L1: ${{ steps.results.outputs.load150 }}
+          L3: ${{ steps.results.outputs.load300 }}
+          S: ${{ steps.results.outputs.stress }}
+        run: |
+          OWNER=$(echo $REPO | cut -d'/' -f1)
+          REPONAME=$(echo $REPO | cut -d'/' -f2)
+          PAGES_URL="https://${OWNER}.github.io/${REPONAME}"
+
+          p() { echo $1 | cut -d'|' -f$2; }
+
+          curl -s -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [{
+              \"color\": \"good\",
+              \"title\": \"✅ JMeter Performance Report — Run #${RUN_NUM}\",
+              \"title_link\": \"${PAGES_URL}\",
+              \"fields\": [
+                {\"title\": \"Baseline (50 users)\",  \"value\": \"Samples: $(p $B 1) | Errors: $(p $B 3)% | Avg RT: $(p $B 4)ms\", \"short\": false},
+                {\"title\": \"Load (150 users)\",     \"value\": \"Samples: $(p $L1 1) | Errors: $(p $L1 3)% | Avg RT: $(p $L1 4)ms\", \"short\": false},
+                {\"title\": \"Load (300 users)\",     \"value\": \"Samples: $(p $L3 1) | Errors: $(p $L3 3)% | Avg RT: $(p $L3 4)ms\", \"short\": false},
+                {\"title\": \"Stress (500 users)\",   \"value\": \"Samples: $(p $S 1) | Errors: $(p $S 3)% | Avg RT: $(p $S 4)ms\", \"short\": false},
+                {\"title\": \"📊 Full Reports\",      \"value\": \"${PAGES_URL}\", \"short\": false}
+              ],
+              \"footer\": \"DemoBlaze CI | GitHub Actions\"
+            }]
+          }" $SLACK_WEBHOOK
+
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "✅ JMeter Performance Report — Run #${{ github.run_number }}"
+          to: ${{ secrets.MAIL_RECIPIENT }}
+          from: JMeter CI <${{ secrets.MAIL_USERNAME }}>
+          html_body: |
+            <h2>DemoBlaze Performance Test Results — Run #${{ github.run_number }}</h2>
+            <table border="1" cellpadding="10" style="border-collapse:collapse; font-family:Arial">
+              <tr style="background:#0066cc; color:white">
+                <th>Test</th><th>Users</th><th>Samples</th><th>Errors</th><th>Error %</th><th>Avg RT</th>
+              </tr>
+              <tr>
+                <td>Baseline</td><td>50</td>
+                <td>${{ steps.results.outputs.baseline }}</td>
+              </tr>
+              <tr>
+                <td>Load</td><td>150</td>
+                <td>${{ steps.results.outputs.load150 }}</td>
+              </tr>
+              <tr>
+                <td>Load</td><td>300</td>
+                <td>${{ steps.results.outputs.load300 }}</td>
+              </tr>
+              <tr>
+                <td>Stress</td><td>500</td>
+                <td>${{ steps.results.outputs.stress }}</td>
+              </tr>
+            </table>
+            <br>
+            <a href="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+               style="background:#0066cc; color:white; padding:10px 20px; text-decoration:none; border-radius:5px">
+              View Full HTML Reports
+            </a>
