@@ -133,7 +133,7 @@ $(document).ready(function() {
         widgets: ['zebra']
     });
 
-    var data = {"OkPercent": 99.9704591492235, "KoPercent": 0.029540850776502363};
+    var data = {"OkPercent": 100.0, "KoPercent": 0.0};
     var dataset = [
         {
             "label" : "FAIL",
@@ -173,7 +173,7 @@ $(document).ready(function() {
     });
 
     // Creates APDEX table
-    createTable($("#apdexTable"), {"supportsControllersDiscrimination": true, "overall": {"data": [0.8975987508440243, 500, 1500, "Total"], "isController": false}, "titles": ["Apdex", "T (Toleration threshold)", "F (Frustration threshold)", "Label"], "items": [{"data": [0.894287521079258, 500, 1500, "02_Login"], "isController": false}, {"data": [0.7133305030779028, 500, 1500, "05_Place_Order"], "isController": false}, {"data": [0.8801940518877874, 500, 1500, "04_Add_To_Cart"], "isController": false}, {"data": [0.9994744586924532, 500, 1500, "01_Homepage"], "isController": false}, {"data": [0.999156651908075, 500, 1500, "03_View_Product"], "isController": false}]}, function(index, item){
+    createTable($("#apdexTable"), {"supportsControllersDiscrimination": true, "overall": {"data": [0.8256241348035706, 500, 1500, "Total"], "isController": false}, "titles": ["Apdex", "T (Toleration threshold)", "F (Frustration threshold)", "Label"], "items": [{"data": [0.8633762517882689, 500, 1500, "02_Login"], "isController": false}, {"data": [0.28839264389777886, 500, 1500, "05_Place_Order"], "isController": false}, {"data": [0.9764748029615476, 500, 1500, "04_Add_To_Cart"], "isController": false}, {"data": [0.9995231282784931, 500, 1500, "01_Homepage"], "isController": false}, {"data": [1.0, 500, 1500, "03_View_Product"], "isController": false}]}, function(index, item){
         switch(index){
             case 0:
                 item = item.toFixed(3);
@@ -187,7 +187,7 @@ $(document).ready(function() {
     }, [[0, 0]], 3);
 
     // Create statistics table
-    createTable($("#statisticsTable"), {"supportsControllersDiscrimination": true, "overall": {"data": ["Total", 23696, 7, 0.029540850776502363, 254.3601873733963, 0, 2178, 68.0, 759.0, 1081.9500000000007, 1680.9900000000016, 39.56672961677245, 300.750256634912, 9.15587738170974], "isController": false}, "titles": ["Label", "#Samples", "FAIL", "Error %", "Average", "Min", "Max", "Median", "90th pct", "95th pct", "99th pct", "Transactions/s", "Received", "Sent"], "items": [{"data": ["02_Login", 4744, 0, 0.0, 279.42664418212456, 40, 1860, 115.0, 754.0, 1060.75, 1543.750000000001, 7.963285627478036, 1.990867306129917, 1.7964052538549082], "isController": false}, {"data": ["05_Place_Order", 4711, 0, 0.0, 602.8596900870292, 35, 2178, 509.0, 1311.0, 1578.3999999999996, 1980.88, 7.951135370147208, 1.5995777752601714, 2.5779071707899153], "isController": false}, {"data": ["04_Add_To_Cart", 4741, 3, 0.06327778949588694, 312.7498418055259, 0, 1892, 180.0, 747.8000000000002, 994.8999999999996, 1430.3199999999997, 7.977184008614889, 1.5440045976914791, 2.281089759094427], "isController": false}, {"data": ["01_Homepage", 4757, 0, 0.0, 40.93378179524925, 25, 1198, 36.0, 42.0, 96.0, 118.0, 7.943465635368711, 135.88673532454325, 1.2566810868454406], "isController": false}, {"data": ["03_View_Product", 4743, 4, 0.0843348091924942, 38.83154121863795, 0, 259, 36.0, 42.0, 46.0, 113.0, 7.9667154893239625, 160.72390098368277, 1.3059369709012485], "isController": false}]}, function(index, item){
+    createTable($("#statisticsTable"), {"supportsControllersDiscrimination": true, "overall": {"data": ["Total", 20949, 0, 0.0, 420.51864050789874, 16, 2513, 89.0, 1878.0, 2079.0, 2243.9900000000016, 34.950824595210086, 95.12410702741143, 8.095102493076237], "isController": false}, "titles": ["Label", "#Samples", "FAIL", "Error %", "Average", "Min", "Max", "Median", "90th pct", "95th pct", "99th pct", "Transactions/s", "Received", "Sent"], "items": [{"data": ["02_Login", 4194, 0, 0.0, 411.41130185979995, 76, 2181, 183.0, 1557.0, 1795.0, 1982.0, 7.021585431800717, 1.7554617563004247, 1.583970932369107], "isController": false}, {"data": ["05_Place_Order", 4187, 0, 0.0, 1465.7007403869145, 70, 2513, 1795.0, 2182.0, 2225.2, 2371.3599999999997, 7.052145792629522, 1.418759184674594, 2.286437893704103], "isController": false}, {"data": ["04_Add_To_Cart", 4187, 0, 0.0, 171.71507045617363, 79, 2261, 93.0, 281.0, 383.0, 1308.0399999999927, 7.075802512949209, 1.3613288016384022, 2.0246192737247246], "isController": false}, {"data": ["01_Homepage", 4194, 0, 0.0, 29.17119694802096, 16, 1076, 21.0, 63.0, 66.0, 82.0, 7.03102603692546, 53.48906016344956, 1.112330290997973], "isController": false}, {"data": ["03_View_Product", 4187, 0, 0.0, 25.26438977788388, 16, 256, 20.0, 60.20000000000027, 64.0, 69.0, 7.076053634019138, 37.87870715941316, 1.1609150493312645], "isController": false}]}, function(index, item){
         switch(index){
             // Errors pct
             case 3:
@@ -217,7 +217,7 @@ $(document).ready(function() {
     }, [[0, 0]], 0, summaryTableHeader);
 
     // Create error table
-    createTable($("#errorsTable"), {"supportsControllersDiscrimination": false, "titles": ["Type of error", "Number of errors", "% in errors", "% in all samples"], "items": [{"data": ["Non HTTP response code: org.apache.http.NoHttpResponseException/Non HTTP response message: api.demoblaze.com:443 failed to respond", 3, 42.857142857142854, 0.012660364618501013], "isController": false}, {"data": ["Non HTTP response code: org.apache.http.NoHttpResponseException/Non HTTP response message: www.demoblaze.com:443 failed to respond", 4, 57.142857142857146, 0.01688048615800135], "isController": false}]}, function(index, item){
+    createTable($("#errorsTable"), {"supportsControllersDiscrimination": false, "titles": ["Type of error", "Number of errors", "% in errors", "% in all samples"], "items": []}, function(index, item){
         switch(index){
             case 2:
             case 3:
@@ -228,7 +228,7 @@ $(document).ready(function() {
     }, [[1, 1]]);
 
         // Create top5 errors by sampler
-    createTable($("#top5ErrorsBySamplerTable"), {"supportsControllersDiscrimination": false, "overall": {"data": ["Total", 23696, 7, "Non HTTP response code: org.apache.http.NoHttpResponseException/Non HTTP response message: www.demoblaze.com:443 failed to respond", 4, "Non HTTP response code: org.apache.http.NoHttpResponseException/Non HTTP response message: api.demoblaze.com:443 failed to respond", 3, "", "", "", "", "", ""], "isController": false}, "titles": ["Sample", "#Samples", "#Errors", "Error", "#Errors", "Error", "#Errors", "Error", "#Errors", "Error", "#Errors", "Error", "#Errors"], "items": [{"data": [], "isController": false}, {"data": [], "isController": false}, {"data": ["04_Add_To_Cart", 4741, 3, "Non HTTP response code: org.apache.http.NoHttpResponseException/Non HTTP response message: api.demoblaze.com:443 failed to respond", 3, "", "", "", "", "", "", "", ""], "isController": false}, {"data": [], "isController": false}, {"data": ["03_View_Product", 4743, 4, "Non HTTP response code: org.apache.http.NoHttpResponseException/Non HTTP response message: www.demoblaze.com:443 failed to respond", 4, "", "", "", "", "", "", "", ""], "isController": false}]}, function(index, item){
+    createTable($("#top5ErrorsBySamplerTable"), {"supportsControllersDiscrimination": false, "overall": {"data": ["Total", 20949, 0, "", "", "", "", "", "", "", "", "", ""], "isController": false}, "titles": ["Sample", "#Samples", "#Errors", "Error", "#Errors", "Error", "#Errors", "Error", "#Errors", "Error", "#Errors", "Error", "#Errors"], "items": [{"data": [], "isController": false}, {"data": [], "isController": false}, {"data": [], "isController": false}, {"data": [], "isController": false}, {"data": [], "isController": false}]}, function(index, item){
         return item;
     }, [[0, 0]], 0);
 
