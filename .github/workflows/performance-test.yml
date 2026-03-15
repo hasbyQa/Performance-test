@@ -91,21 +91,28 @@ jobs:
           cat > reports/index.html << 'EOF'
           <!DOCTYPE html>
           <html>
-          <head><title>JMeter Performance Reports</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 40px; background: #f5f5f5; }
-            h1 { color: #333; }
-            .card { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-            a { color: #0066cc; text-decoration: none; font-size: 18px; }
-            a:hover { text-decoration: underline; }
-          </style>
+          <head>
+            <title>JMeter Performance Reports</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 40px; background: #f5f5f5; }
+              h1 { color: #333; }
+              .card {
+                background: white;
+                padding: 20px;
+                margin: 10px 0;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              }
+              a { color: #0066cc; text-decoration: none; font-size: 18px; }
+              a:hover { text-decoration: underline; }
+            </style>
           </head>
           <body>
             <h1>DemoBlaze JMeter Performance Reports</h1>
-            <div class="card"><a href="baseline/html/index.html">Baseline Test — 50 Users</a></div>
-            <div class="card"><a href="load_150/html/index.html">Load Test — 150 Users</a></div>
-            <div class="card"><a href="load_300/html/index.html">Load Test — 300 Users</a></div>
-            <div class="card"><a href="stress_500/html/index.html">Stress Test — 500 Users</a></div>
+            <div class="card"><a href="baseline/html/index.html">📊 Baseline Test — 50 Users</a></div>
+            <div class="card"><a href="load_150/html/index.html">📊 Load Test — 150 Users</a></div>
+            <div class="card"><a href="load_300/html/index.html">📊 Load Test — 300 Users</a></div>
+            <div class="card"><a href="stress_500/html/index.html">📊 Stress Test — 500 Users</a></div>
           </body>
           </html>
           EOF
@@ -130,7 +137,6 @@ jobs:
           OWNER=$(echo $REPO | cut -d'/' -f1)
           REPONAME=$(echo $REPO | cut -d'/' -f2)
           PAGES_URL="https://${OWNER}.github.io/${REPONAME}"
-
           p() { echo $1 | cut -d'|' -f$2; }
 
           curl -s -X POST -H 'Content-type: application/json' \
@@ -150,6 +156,36 @@ jobs:
             }]
           }" $SLACK_WEBHOOK
 
+      - name: Format Email Body
+        id: email_body
+        run: |
+          p() { echo $1 | cut -d'|' -f$2; }
+          B="${{ steps.results.outputs.baseline }}"
+          L1="${{ steps.results.outputs.load150 }}"
+          L3="${{ steps.results.outputs.load300 }}"
+          S="${{ steps.results.outputs.stress }}"
+          OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
+          REPONAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+          PAGES_URL="https://${OWNER}.github.io/${REPONAME}"
+
+          cat > /tmp/email_body.html << EOF
+          <h2>DemoBlaze Performance Test Results — Run #${{ github.run_number }}</h2>
+          <table border="1" cellpadding="10" style="border-collapse:collapse; font-family:Arial">
+            <tr style="background:#0066cc; color:white">
+              <th>Test</th><th>Users</th><th>Samples</th><th>Errors</th><th>Error %</th><th>Avg RT</th>
+            </tr>
+            <tr><td>Baseline</td><td>50</td><td>$(p $B 1)</td><td>$(p $B 2)</td><td>$(p $B 3)%</td><td>$(p $B 4)ms</td></tr>
+            <tr><td>Load</td><td>150</td><td>$(p $L1 1)</td><td>$(p $L1 2)</td><td>$(p $L1 3)%</td><td>$(p $L1 4)ms</td></tr>
+            <tr><td>Load</td><td>300</td><td>$(p $L3 1)</td><td>$(p $L3 2)</td><td>$(p $L3 3)%</td><td>$(p $L3 4)ms</td></tr>
+            <tr><td>Stress</td><td>500</td><td>$(p $S 1)</td><td>$(p $S 2)</td><td>$(p $S 3)%</td><td>$(p $S 4)ms</td></tr>
+          </table>
+          <br>
+          <a href="${PAGES_URL}" style="background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:5px">
+            View Full HTML Reports
+          </a>
+          EOF
+          echo "body_path=/tmp/email_body.html" >> $GITHUB_OUTPUT
+
       - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
         with:
@@ -160,31 +196,4 @@ jobs:
           subject: "✅ JMeter Performance Report — Run #${{ github.run_number }}"
           to: ${{ secrets.MAIL_RECIPIENT }}
           from: JMeter CI <${{ secrets.MAIL_USERNAME }}>
-          html_body: |
-            <h2>DemoBlaze Performance Test Results — Run #${{ github.run_number }}</h2>
-            <table border="1" cellpadding="10" style="border-collapse:collapse; font-family:Arial">
-              <tr style="background:#0066cc; color:white">
-                <th>Test</th><th>Users</th><th>Samples</th><th>Errors</th><th>Error %</th><th>Avg RT</th>
-              </tr>
-              <tr>
-                <td>Baseline</td><td>50</td>
-                <td>${{ steps.results.outputs.baseline }}</td>
-              </tr>
-              <tr>
-                <td>Load</td><td>150</td>
-                <td>${{ steps.results.outputs.load150 }}</td>
-              </tr>
-              <tr>
-                <td>Load</td><td>300</td>
-                <td>${{ steps.results.outputs.load300 }}</td>
-              </tr>
-              <tr>
-                <td>Stress</td><td>500</td>
-                <td>${{ steps.results.outputs.stress }}</td>
-              </tr>
-            </table>
-            <br>
-            <a href="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
-               style="background:#0066cc; color:white; padding:10px 20px; text-decoration:none; border-radius:5px">
-              View Full HTML Reports
-            </a>
+          html_body: file://${{ steps.email_body.outputs.body_path }}
