@@ -70,6 +70,17 @@ jobs:
             -Jthreads=500 -Jrampup=60 -Jloops=1
         continue-on-error: true
 
+      - name: Run Endurance Test (50 users 10 min)
+        run: |
+          mkdir -p reports/endurance
+          jmeter -n \
+            -t demoblaze_perf_test.jmx \
+            -l reports/endurance/results.jtl \
+            -e -o reports/endurance/html \
+            -Jthreads=50 -Jrampup=10 -Jloops=-1 \
+            -Jduration=600
+        continue-on-error: true
+
       - name: Parse Results
         id: results
         run: |
@@ -85,6 +96,7 @@ jobs:
           echo "load150=$(parse_jtl reports/load_150/results.jtl)" >> $GITHUB_OUTPUT
           echo "load300=$(parse_jtl reports/load_300/results.jtl)" >> $GITHUB_OUTPUT
           echo "stress=$(parse_jtl reports/stress_500/results.jtl)" >> $GITHUB_OUTPUT
+          echo "endurance=$(parse_jtl reports/endurance/results.jtl)" >> $GITHUB_OUTPUT
 
       - name: Create Reports Index Page
         run: |
@@ -113,6 +125,7 @@ jobs:
             <div class="card"><a href="load_150/html/index.html">📊 Load Test — 150 Users</a></div>
             <div class="card"><a href="load_300/html/index.html">📊 Load Test — 300 Users</a></div>
             <div class="card"><a href="stress_500/html/index.html">📊 Stress Test — 500 Users</a></div>
+            <div class="card"><a href="endurance/html/index.html">📊 Endurance Test — 50 Users (10 min)</a></div>
           </body>
           </html>
           EOF
@@ -133,6 +146,7 @@ jobs:
           L1: ${{ steps.results.outputs.load150 }}
           L3: ${{ steps.results.outputs.load300 }}
           S: ${{ steps.results.outputs.stress }}
+          E: ${{ steps.results.outputs.endurance }}
         run: |
           OWNER=$(echo $REPO | cut -d'/' -f1)
           REPONAME=$(echo $REPO | cut -d'/' -f2)
@@ -146,11 +160,12 @@ jobs:
               \"title\": \"✅ JMeter Performance Report — Run #${RUN_NUM}\",
               \"title_link\": \"${PAGES_URL}\",
               \"fields\": [
-                {\"title\": \"Baseline (50 users)\",  \"value\": \"Samples: $(p $B 1) | Errors: $(p $B 3)% | Avg RT: $(p $B 4)ms\", \"short\": false},
-                {\"title\": \"Load (150 users)\",     \"value\": \"Samples: $(p $L1 1) | Errors: $(p $L1 3)% | Avg RT: $(p $L1 4)ms\", \"short\": false},
-                {\"title\": \"Load (300 users)\",     \"value\": \"Samples: $(p $L3 1) | Errors: $(p $L3 3)% | Avg RT: $(p $L3 4)ms\", \"short\": false},
-                {\"title\": \"Stress (500 users)\",   \"value\": \"Samples: $(p $S 1) | Errors: $(p $S 3)% | Avg RT: $(p $S 4)ms\", \"short\": false},
-                {\"title\": \"📊 Full Reports\",      \"value\": \"${PAGES_URL}\", \"short\": false}
+                {\"title\": \"Baseline (50 users)\",       \"value\": \"Samples: $(p $B 1) | Errors: $(p $B 3)% | Avg RT: $(p $B 4)ms\", \"short\": false},
+                {\"title\": \"Load (150 users)\",          \"value\": \"Samples: $(p $L1 1) | Errors: $(p $L1 3)% | Avg RT: $(p $L1 4)ms\", \"short\": false},
+                {\"title\": \"Load (300 users)\",          \"value\": \"Samples: $(p $L3 1) | Errors: $(p $L3 3)% | Avg RT: $(p $L3 4)ms\", \"short\": false},
+                {\"title\": \"Stress (500 users)\",        \"value\": \"Samples: $(p $S 1) | Errors: $(p $S 3)% | Avg RT: $(p $S 4)ms\", \"short\": false},
+                {\"title\": \"Endurance (50 users/10min)\",\"value\": \"Samples: $(p $E 1) | Errors: $(p $E 3)% | Avg RT: $(p $E 4)ms\", \"short\": false},
+                {\"title\": \"📊 Full Reports\",           \"value\": \"${PAGES_URL}\", \"short\": false}
               ],
               \"footer\": \"DemoBlaze CI | GitHub Actions\"
             }]
@@ -164,6 +179,7 @@ jobs:
           L1="${{ steps.results.outputs.load150 }}"
           L3="${{ steps.results.outputs.load300 }}"
           S="${{ steps.results.outputs.stress }}"
+          E="${{ steps.results.outputs.endurance }}"
           OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
           REPONAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           PAGES_URL="https://${OWNER}.github.io/${REPONAME}"
@@ -178,6 +194,7 @@ jobs:
             <tr><td>Load</td><td>150</td><td>$(p $L1 1)</td><td>$(p $L1 2)</td><td>$(p $L1 3)%</td><td>$(p $L1 4)ms</td></tr>
             <tr><td>Load</td><td>300</td><td>$(p $L3 1)</td><td>$(p $L3 2)</td><td>$(p $L3 3)%</td><td>$(p $L3 4)ms</td></tr>
             <tr><td>Stress</td><td>500</td><td>$(p $S 1)</td><td>$(p $S 2)</td><td>$(p $S 3)%</td><td>$(p $S 4)ms</td></tr>
+            <tr><td>Endurance</td><td>50 (10min)</td><td>$(p $E 1)</td><td>$(p $E 2)</td><td>$(p $E 3)%</td><td>$(p $E 4)ms</td></tr>
           </table>
           <br>
           <a href="${PAGES_URL}" style="background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:5px">
