@@ -40,45 +40,45 @@ jobs:
             -Jthreads=50 -Jrampup=10 -Jloops=1
         continue-on-error: true
 
-      - name: Run Load Test 150 users
+      - name: Run Load Test (150 users)
         run: |
           mkdir -p reports/load_150
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/load_150/results.jtl \
             -e -o reports/load_150/html \
-            -Jthreads=150 -Jrampup=30 -Jloops=1
+            -Jthreads=150 -Jrampup=15 -Jloops=1
         continue-on-error: true
 
-      - name: Run Load Test 300 users
+      - name: Run Peak Load Test (400 users)
         run: |
           mkdir -p reports/load_300
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/load_300/results.jtl \
             -e -o reports/load_300/html \
-            -Jthreads=300 -Jrampup=60 -Jloops=1
+            -Jthreads=400 -Jrampup=20 -Jloops=2
         continue-on-error: true
 
-      - name: Run Stress Test 500 users
+      - name: Run Stress Test (800 users)
         run: |
           mkdir -p reports/stress_500
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/stress_500/results.jtl \
             -e -o reports/stress_500/html \
-            -Jthreads=500 -Jrampup=60 -Jloops=1
+            -Jthreads=800 -Jrampup=25 -Jloops=2
         continue-on-error: true
 
-      - name: Run Endurance Test (50 users 10 min)
+      - name: Run Soak Test (300 users 5 min)
         run: |
           mkdir -p reports/endurance
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/endurance/results.jtl \
             -e -o reports/endurance/html \
-            -Jthreads=50 -Jrampup=10 -Jloops=-1 \
-            -Jduration=600
+            -Jthreads=300 -Jrampup=15 -Jloops=-1 \
+            -Jduration=300
         continue-on-error: true
 
       - name: Parse Results
@@ -123,9 +123,9 @@ jobs:
             <h1>DemoBlaze JMeter Performance Reports</h1>
             <div class="card"><a href="baseline/html/index.html">📊 Baseline Test — 50 Users</a></div>
             <div class="card"><a href="load_150/html/index.html">📊 Load Test — 150 Users</a></div>
-            <div class="card"><a href="load_300/html/index.html">📊 Load Test — 300 Users</a></div>
-            <div class="card"><a href="stress_500/html/index.html">📊 Stress Test — 500 Users</a></div>
-            <div class="card"><a href="endurance/html/index.html">📊 Endurance Test — 50 Users (10 min)</a></div>
+            <div class="card"><a href="load_300/html/index.html">📊 Peak Load Test — 400 Users</a></div>
+            <div class="card"><a href="stress_500/html/index.html">📊 Stress Test — 800 Users</a></div>
+            <div class="card"><a href="endurance/html/index.html">📊 Soak Test — 300 Users (5 min)</a></div>
           </body>
           </html>
           EOF
@@ -157,15 +157,15 @@ jobs:
           --data "{
             \"attachments\": [{
               \"color\": \"good\",
-              \"title\": \"✅ JMeter Performance Report — Run #${RUN_NUM}\",
+              \"title\": \"JMeter Performance Report — Run #${RUN_NUM}\",
               \"title_link\": \"${PAGES_URL}\",
               \"fields\": [
-                {\"title\": \"Baseline (50 users)\",       \"value\": \"Samples: $(p $B 1) | Errors: $(p $B 3)% | Avg RT: $(p $B 4)ms\", \"short\": false},
-                {\"title\": \"Load (150 users)\",          \"value\": \"Samples: $(p $L1 1) | Errors: $(p $L1 3)% | Avg RT: $(p $L1 4)ms\", \"short\": false},
-                {\"title\": \"Load (300 users)\",          \"value\": \"Samples: $(p $L3 1) | Errors: $(p $L3 3)% | Avg RT: $(p $L3 4)ms\", \"short\": false},
-                {\"title\": \"Stress (500 users)\",        \"value\": \"Samples: $(p $S 1) | Errors: $(p $S 3)% | Avg RT: $(p $S 4)ms\", \"short\": false},
-                {\"title\": \"Endurance (50 users/10min)\",\"value\": \"Samples: $(p $E 1) | Errors: $(p $E 3)% | Avg RT: $(p $E 4)ms\", \"short\": false},
-                {\"title\": \"📊 Full Reports\",           \"value\": \"${PAGES_URL}\", \"short\": false}
+                {\"title\": \"Baseline Test (50 users)\",      \"value\": \"Samples: $(p $B 1) | Errors: $(p $B 3)% | Avg RT: $(p $B 4)ms\", \"short\": false},
+                {\"title\": \"Load Test (150 users)\",         \"value\": \"Samples: $(p $L1 1) | Errors: $(p $L1 3)% | Avg RT: $(p $L1 4)ms\", \"short\": false},
+                {\"title\": \"Peak Load Test (400 users)\",    \"value\": \"Samples: $(p $L3 1) | Errors: $(p $L3 3)% | Avg RT: $(p $L3 4)ms\", \"short\": false},
+                {\"title\": \"Stress Test (800 users)\",       \"value\": \"Samples: $(p $S 1) | Errors: $(p $S 3)% | Avg RT: $(p $S 4)ms\", \"short\": false},
+                {\"title\": \"Soak Test (300 users/5min)\",    \"value\": \"Samples: $(p $E 1) | Errors: $(p $E 3)% | Avg RT: $(p $E 4)ms\", \"short\": false},
+                {\"title\": \"Full Reports\",                  \"value\": \"${PAGES_URL}\", \"short\": false}
               ],
               \"footer\": \"DemoBlaze CI | GitHub Actions\"
             }]
@@ -190,11 +190,11 @@ jobs:
             <tr style="background:#0066cc; color:white">
               <th>Test</th><th>Users</th><th>Samples</th><th>Errors</th><th>Error %</th><th>Avg RT</th>
             </tr>
-            <tr><td>Baseline</td><td>50</td><td>$(p $B 1)</td><td>$(p $B 2)</td><td>$(p $B 3)%</td><td>$(p $B 4)ms</td></tr>
-            <tr><td>Load</td><td>150</td><td>$(p $L1 1)</td><td>$(p $L1 2)</td><td>$(p $L1 3)%</td><td>$(p $L1 4)ms</td></tr>
-            <tr><td>Load</td><td>300</td><td>$(p $L3 1)</td><td>$(p $L3 2)</td><td>$(p $L3 3)%</td><td>$(p $L3 4)ms</td></tr>
-            <tr><td>Stress</td><td>500</td><td>$(p $S 1)</td><td>$(p $S 2)</td><td>$(p $S 3)%</td><td>$(p $S 4)ms</td></tr>
-            <tr><td>Endurance</td><td>50 (10min)</td><td>$(p $E 1)</td><td>$(p $E 2)</td><td>$(p $E 3)%</td><td>$(p $E 4)ms</td></tr>
+            <tr><td>Baseline Test</td><td>50</td><td>$(p $B 1)</td><td>$(p $B 2)</td><td>$(p $B 3)%</td><td>$(p $B 4)ms</td></tr>
+            <tr><td>Load Test</td><td>150</td><td>$(p $L1 1)</td><td>$(p $L1 2)</td><td>$(p $L1 3)%</td><td>$(p $L1 4)ms</td></tr>
+            <tr><td>Peak Load Test</td><td>400</td><td>$(p $L3 1)</td><td>$(p $L3 2)</td><td>$(p $L3 3)%</td><td>$(p $L3 4)ms</td></tr>
+            <tr><td>Stress Test</td><td>800</td><td>$(p $S 1)</td><td>$(p $S 2)</td><td>$(p $S 3)%</td><td>$(p $S 4)ms</td></tr>
+            <tr><td>Soak Test</td><td>300 (5min)</td><td>$(p $E 1)</td><td>$(p $E 2)</td><td>$(p $E 3)%</td><td>$(p $E 4)ms</td></tr>
           </table>
           <br>
           <a href="${PAGES_URL}" style="background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:5px">
@@ -210,7 +210,7 @@ jobs:
           server_port: 465
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "✅ JMeter Performance Report — Run #${{ github.run_number }}"
+          subject: "JMeter Performance Report — Run #${{ github.run_number }}"
           to: ${{ secrets.MAIL_RECIPIENT }}
           from: JMeter CI <${{ secrets.MAIL_USERNAME }}>
           html_body: file://${{ steps.email_body.outputs.body_path }}
