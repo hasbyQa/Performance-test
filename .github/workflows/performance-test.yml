@@ -30,55 +30,59 @@ jobs:
           tar -xzf apache-jmeter-5.6.3.tgz
           echo "$(pwd)/apache-jmeter-5.6.3/bin" >> $GITHUB_PATH
 
+      # ── Baseline: 50 users only, no duration assertion ──────────────────
       - name: Run Baseline Test (50 users)
         run: |
-          mkdir -p reports/baseline
+          mkdir -p reports/baseline/html
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/baseline/results.jtl \
             -e -o reports/baseline/html \
-            -Jthreads=50 -Jrampup=10 -Jloops=1
+            -Jbaseline_threads=50
         continue-on-error: true
 
+      # ── Load: 150 users only, no duration assertion ──────────────────────
       - name: Run Load Test (150 users)
         run: |
-          mkdir -p reports/load_150
+          mkdir -p reports/load_150/html
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/load_150/results.jtl \
             -e -o reports/load_150/html \
-            -Jthreads=150 -Jrampup=15 -Jloops=1
+            -Jload_threads=150
         continue-on-error: true
 
+      # ── Peak Load: 400 users only, 500ms duration assertion ──────────────
       - name: Run Peak Load Test (400 users)
         run: |
-          mkdir -p reports/load_300
+          mkdir -p reports/load_300/html
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/load_300/results.jtl \
             -e -o reports/load_300/html \
-            -Jthreads=400 -Jrampup=20 -Jloops=2
+            -Jpeak_threads=400
         continue-on-error: true
 
+      # ── Stress: 800 users only, 500ms duration assertion ─────────────────
       - name: Run Stress Test (800 users)
         run: |
-          mkdir -p reports/stress_500
+          mkdir -p reports/stress_500/html
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/stress_500/results.jtl \
             -e -o reports/stress_500/html \
-            -Jthreads=800 -Jrampup=25 -Jloops=2
+            -Jstress_threads=800
         continue-on-error: true
 
+      # ── Soak: 300 users only, 500ms duration assertion, 300s duration ────
       - name: Run Soak Test (300 users 5 min)
         run: |
-          mkdir -p reports/endurance
+          mkdir -p reports/endurance/html
           jmeter -n \
             -t demoblaze_perf_test.jmx \
             -l reports/endurance/results.jtl \
             -e -o reports/endurance/html \
-            -Jthreads=300 -Jrampup=15 -Jloops=-1 \
-            -Jduration=300
+            -Jsoak_threads=300
         continue-on-error: true
 
       - name: Parse Results
@@ -86,16 +90,20 @@ jobs:
         run: |
           parse_jtl() {
             local file=$1
+            if [ ! -f "$file" ]; then
+              echo "0|0|0|0"
+              return
+            fi
             local total=$(tail -n +2 "$file" | wc -l)
             local errors=$(tail -n +2 "$file" | awk -F',' '$8=="false"' | wc -l)
-            local error_pct=$(echo "scale=2; $errors * 100 / $total" | bc)
-            local avg_rt=$(tail -n +2 "$file" | awk -F',' '{sum+=$2} END {printf "%.0f", sum/NR}')
+            local error_pct=$(echo "scale=2; if ($total > 0) $errors * 100 / $total else 0" | bc)
+            local avg_rt=$(tail -n +2 "$file" | awk -F',' '{sum+=$2; n++} END {if(n>0) printf "%.0f", sum/n; else print 0}')
             echo "${total}|${errors}|${error_pct}|${avg_rt}"
           }
-          echo "baseline=$(parse_jtl reports/baseline/results.jtl)" >> $GITHUB_OUTPUT
-          echo "load150=$(parse_jtl reports/load_150/results.jtl)" >> $GITHUB_OUTPUT
-          echo "load300=$(parse_jtl reports/load_300/results.jtl)" >> $GITHUB_OUTPUT
-          echo "stress=$(parse_jtl reports/stress_500/results.jtl)" >> $GITHUB_OUTPUT
+          echo "baseline=$(parse_jtl reports/baseline/results.jtl)"   >> $GITHUB_OUTPUT
+          echo "load150=$(parse_jtl reports/load_150/results.jtl)"    >> $GITHUB_OUTPUT
+          echo "load300=$(parse_jtl reports/load_300/results.jtl)"    >> $GITHUB_OUTPUT
+          echo "stress=$(parse_jtl reports/stress_500/results.jtl)"   >> $GITHUB_OUTPUT
           echo "endurance=$(parse_jtl reports/endurance/results.jtl)" >> $GITHUB_OUTPUT
 
       - name: Create Reports Index Page
@@ -104,7 +112,7 @@ jobs:
           <!DOCTYPE html>
           <html>
           <head>
-            <title>JMeter Performance Reports</title>
+            <title>DemoBlaze JMeter Performance Reports</title>
             <style>
               body { font-family: Arial, sans-serif; padding: 40px; background: #f5f5f5; }
               h1 { color: #333; }
@@ -142,11 +150,11 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
           REPO: ${{ github.repository }}
           RUN_NUM: ${{ github.run_number }}
-          B: ${{ steps.results.outputs.baseline }}
+          B:  ${{ steps.results.outputs.baseline }}
           L1: ${{ steps.results.outputs.load150 }}
           L3: ${{ steps.results.outputs.load300 }}
-          S: ${{ steps.results.outputs.stress }}
-          E: ${{ steps.results.outputs.endurance }}
+          S:  ${{ steps.results.outputs.stress }}
+          E:  ${{ steps.results.outputs.endurance }}
         run: |
           OWNER=$(echo $REPO | cut -d'/' -f1)
           REPONAME=$(echo $REPO | cut -d'/' -f2)
@@ -160,12 +168,12 @@ jobs:
               \"title\": \"JMeter Performance Report — Run #${RUN_NUM}\",
               \"title_link\": \"${PAGES_URL}\",
               \"fields\": [
-                {\"title\": \"Baseline Test (50 users)\",      \"value\": \"Samples: $(p $B 1) | Errors: $(p $B 3)% | Avg RT: $(p $B 4)ms\", \"short\": false},
-                {\"title\": \"Load Test (150 users)\",         \"value\": \"Samples: $(p $L1 1) | Errors: $(p $L1 3)% | Avg RT: $(p $L1 4)ms\", \"short\": false},
-                {\"title\": \"Peak Load Test (400 users)\",    \"value\": \"Samples: $(p $L3 1) | Errors: $(p $L3 3)% | Avg RT: $(p $L3 4)ms\", \"short\": false},
-                {\"title\": \"Stress Test (800 users)\",       \"value\": \"Samples: $(p $S 1) | Errors: $(p $S 3)% | Avg RT: $(p $S 4)ms\", \"short\": false},
-                {\"title\": \"Soak Test (300 users/5min)\",    \"value\": \"Samples: $(p $E 1) | Errors: $(p $E 3)% | Avg RT: $(p $E 4)ms\", \"short\": false},
-                {\"title\": \"Full Reports\",                  \"value\": \"${PAGES_URL}\", \"short\": false}
+                {\"title\": \"Baseline Test (50 users)\",   \"value\": \"Samples: $(p $B 1) | Errors: $(p $B 3)% | Avg RT: $(p $B 4)ms\", \"short\": false},
+                {\"title\": \"Load Test (150 users)\",      \"value\": \"Samples: $(p $L1 1) | Errors: $(p $L1 3)% | Avg RT: $(p $L1 4)ms\", \"short\": false},
+                {\"title\": \"Peak Load Test (400 users)\", \"value\": \"Samples: $(p $L3 1) | Errors: $(p $L3 3)% | Avg RT: $(p $L3 4)ms\", \"short\": false},
+                {\"title\": \"Stress Test (800 users)\",    \"value\": \"Samples: $(p $S 1) | Errors: $(p $S 3)% | Avg RT: $(p $S 4)ms\", \"short\": false},
+                {\"title\": \"Soak Test (300 users/5min)\", \"value\": \"Samples: $(p $E 1) | Errors: $(p $E 3)% | Avg RT: $(p $E 4)ms\", \"short\": false},
+                {\"title\": \"Full Reports\", \"value\": \"${PAGES_URL}\", \"short\": false}
               ],
               \"footer\": \"DemoBlaze CI | GitHub Actions\"
             }]
